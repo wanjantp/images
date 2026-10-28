@@ -2,7 +2,7 @@ import type { EditorProject, ExportProgress, ExportRequest } from './timeline'
 
 // Types shared by main, preload and renderer.
 
-export type Mode = 'text' | 'image' | 'voice' | 'video'
+export type Mode = 'text' | 'image' | 'voice' | 'music' | 'video'
 
 export interface Settings {
   libraryDir: string
@@ -66,6 +66,14 @@ export interface TTSRequest {
   format: 'mp3' | 'wav' | 'opus'
   speed?: number
   instructions?: string
+}
+
+export interface MusicRequest {
+  model: string
+  prompt: string
+  lyrics?: string
+  instrumental: boolean
+  format: 'mp3' | 'wav'
 }
 
 export interface VideoRequest {
@@ -146,6 +154,7 @@ export interface Api {
     enhance(prompt: string, mode: Mode): Promise<string>
     image(req: ImageRequest): Promise<GenerateResult>
     tts(req: TTSRequest): Promise<GenerateResult>
+    music(req: MusicRequest): Promise<GenerateResult>
     videoSubmit(req: VideoRequest): Promise<Job>
   }
   library: {

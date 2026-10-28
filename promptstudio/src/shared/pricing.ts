@@ -10,6 +10,10 @@ export function modalities(m: ORModel): string[] {
   return (m.architecture?.output_modalities ?? ['text']).map((s) => s.toLowerCase())
 }
 
+/** Music generators are audio-output models whose id/name says so (Lyria, Suno-style, ACE-Step, Stable Audio…). */
+export const MUSIC_RE = /lyria|music|song|suno|udio|ace-?step|stable-?audio|riffusion|jukebox|melody/i
+export const isMusicModel = (m: ORModel): boolean => MUSIC_RE.test(m.id) || MUSIC_RE.test(m.name)
+
 export function supportsMode(m: ORModel, mode: Mode): boolean {
   const out = modalities(m)
   switch (mode) {
@@ -18,7 +22,9 @@ export function supportsMode(m: ORModel, mode: Mode): boolean {
     case 'image':
       return out.includes('image')
     case 'voice':
-      return out.includes('audio') || out.includes('speech')
+      return (out.includes('audio') || out.includes('speech')) && !isMusicModel(m)
+    case 'music':
+      return out.includes('audio') && isMusicModel(m)
     case 'video':
       return out.includes('video')
   }
@@ -54,6 +60,10 @@ export function estimateCost(
       // TTS models are priced per input character; OpenRouter exposes it under pricing.prompt for most.
       const perChar = price(p.prompt)
       return { usd: opts.prompt.length * perChar, note: `${opts.prompt.length} chars` }
+    }
+    case 'music': {
+      const perReq = price(p.request)
+      return { usd: perReq, note: perReq ? 'per song / clip' : 'billed per song or clip (Lyria: $0.04 per 30 s clip, $0.08 per song); actual cost shown after run' }
     }
     case 'video': {
       const perSec = price(p.video ?? p.completion)

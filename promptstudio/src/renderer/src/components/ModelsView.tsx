@@ -4,7 +4,7 @@ import { modalities, price, supportsMode } from '@shared/pricing'
 import { useStore } from '../lib/store'
 
 const FILTERS: Array<{ id: Mode | 'all'; label: string }> = [
-  { id: 'all', label: 'All' }, { id: 'text', label: 'Text' }, { id: 'image', label: 'Image' }, { id: 'voice', label: 'Speech' }, { id: 'video', label: 'Video' }
+  { id: 'all', label: 'All' }, { id: 'text', label: 'Text' }, { id: 'image', label: 'Image' }, { id: 'voice', label: 'Speech' }, { id: 'music', label: 'Music' }, { id: 'video', label: 'Video' }
 ]
 
 export default function ModelsView(): React.JSX.Element {

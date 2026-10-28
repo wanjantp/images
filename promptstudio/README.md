@@ -1,6 +1,6 @@
 # PromptStudio (MVP)
 
-Windows desktop app that generates **text, images, voice (TTS) and video** through a single
+Windows desktop app that generates **text, images, voice (TTS), music and video** through a single
 [OpenRouter](https://openrouter.ai) API key. This is the Phase 0–1 MVP from
 [`../docs/ai-studio-design.md`](../docs/ai-studio-design.md).
 
@@ -16,6 +16,7 @@ Windows desktop app that generates **text, images, voice (TTS) and video** throu
 | Text generation → saved as Markdown | ✅ |
 | Image generation (`/chat/completions` with `modalities: ["image","text"]`), batch 1–8 | ✅ |
 | Text-to-speech (`/audio/speech`), voice, speed, style instructions, auto-chunking of long scripts | ✅ |
+| Music generation (Google Lyria 3 via `/chat/completions` with audio output): genre/mood presets, instrumental or lyrics, mp3/wav | ✅ |
 | Video generation (`/videos`, async job queue that survives restarts, background polling) | ✅ (verify field names against OpenRouter docs) |
 | Pre-flight cost estimate + actual cost read back from `GET /generation?id=` | ✅ |
 | Local library: every file saved to a folder with a `library.json` index, search, delete, reveal | ✅ |
@@ -73,7 +74,8 @@ Music clips default to 30 % volume with a 1 s fade-out. Image clips default to 4
 ```
 src/main/        Electron main process
   openrouter.ts  OpenRouter adapter (models, credits, chat, image, tts, video, cost)
-  generate.ts    text / image / tts flows, prompt enhancer, script chunking
+  generate.ts    text / image / tts / music flows, prompt enhancer, script chunking
+  audiostream.ts collects streamed or single-message audio output (pure, unit-testable)
   jobs.ts        persistent async job queue for video
   library.ts     asset + generation index on disk
   settings.ts    settings + encrypted API key
@@ -99,6 +101,9 @@ src/shared/      types and pricing helpers shared by all three
 - The video endpoint is the newest part of OpenRouter's API. `openrouter.ts` reads the job id, status
   and download URL defensively from several possible field names; if a provider returns a different
   shape, adjust `readVideoState()`.
+- Music models are detected by name (Lyria, Suno-style, ACE-Step, Stable Audio…) among audio-output
+  models in the catalog; they are billed per song or clip, so the pre-flight estimate uses the
+  `request` price when OpenRouter lists one and the actual cost is read back after the run.
 - Model IDs are never hardcoded for generation: the catalog is fetched at runtime and your last
   choice per mode is remembered.
 - Key, settings and job queue live in `%APPDATA%\promptstudio\`.

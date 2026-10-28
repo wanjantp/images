@@ -36,7 +36,7 @@ export default function AssetPanel({ onAdd, onAddCaption }: Props): React.JSX.El
               <div className="thumb">
                 {a.kind === 'image' && <img src={window.api.library.mediaUrl(a)} alt="" />}
                 {a.kind === 'video' && <video src={window.api.library.mediaUrl(a)} muted />}
-                {a.kind === 'audio' && <span>🎙</span>}
+                {a.kind === 'audio' && <span>{g?.mode === 'music' ? '🎵' : '🎙'}</span>}
               </div>
               <div className="asset-info" title={a.text ?? g?.prompt}>
                 <div className="name">{a.text ?? g?.prompt ?? a.fileName}</div>

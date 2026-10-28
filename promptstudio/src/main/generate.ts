@@ -1,4 +1,4 @@
-import type { ChatRequest, GenerateResult, Generation, ImageRequest, Mode, TTSRequest } from '@shared/types'
+import type { ChatRequest, GenerateResult, Generation, ImageRequest, Mode, MusicRequest, TTSRequest } from '@shared/types'
 import * as or from './openrouter'
 import { addGeneration, newId, parseDataUrl, saveAsset, updateGeneration } from './library'
 import { getSettings } from './settings'
@@ -31,6 +31,7 @@ const ENHANCE_SYSTEM: Record<Mode, string> = {
   text: 'You improve prompts for a large language model. Rewrite the user prompt to be clear, specific and well structured. Keep the original language. Return only the improved prompt.',
   image: 'You are an expert prompt writer for AI image generators. Expand the idea into one detailed prompt: subject, setting, composition, lighting, camera/lens, style, mood, colour palette. Keep it under 120 words. Return only the prompt in English.',
   voice: 'You are a script editor for text-to-speech narration. Rewrite the text so it reads naturally aloud: short sentences, clear punctuation, expand abbreviations and numbers. Keep the original language and meaning. Return only the script.',
+  music: 'You are a music producer writing prompts for an AI music generator. Expand the idea into one vivid description: genre, mood, tempo (BPM), instrumentation, vocal style or instrumental, structure, era/reference style. Keep it under 80 words. Return only the description in English.',
   video: 'You are an expert prompt writer for AI video generators. Expand the idea into one detailed shot description: subject and action, setting, camera movement, lighting, style, mood, duration pacing. Keep it under 100 words. Return only the prompt in English.'
 }
 
@@ -100,4 +101,22 @@ export async function runTTS(req: TTSRequest): Promise<GenerateResult> {
   }
   await finish(g, t, lastId)
   return { generation: g, assets }
+}
+
+/** Compose the final music prompt from description, lyrics and the instrumental flag. */
+export function musicPrompt(req: MusicRequest): string {
+  const parts = [req.prompt.trim()]
+  if (req.instrumental) parts.push('Instrumental only, no vocals.')
+  else if (req.lyrics?.trim()) parts.push(`Lyrics:\n${req.lyrics.trim()}`)
+  return parts.join('\n\n')
+}
+
+export async function runMusic(req: MusicRequest): Promise<GenerateResult> {
+  const g = startGeneration('music', req.model, req.prompt, { instrumental: req.instrumental, lyrics: req.lyrics, format: req.format })
+  await addGeneration(g)
+  const t = Date.now()
+  const out = await or.generateMusic({ model: req.model, prompt: musicPrompt(req), format: req.format })
+  const asset = await saveAsset({ kind: 'audio', bytes: out.bytes, mime: out.mime, generationId: g.id, text: `🎵 ${req.prompt.trim().slice(0, 80)}` })
+  await finish(g, t, out.id)
+  return { generation: g, assets: [asset] }
 }

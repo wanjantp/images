@@ -6,7 +6,7 @@ import ModelSelect from './ModelSelect'
 import ResultTile from './ResultTile'
 
 const MODES: Array<{ id: Mode; label: string }> = [
-  { id: 'text', label: '✍️ Text' }, { id: 'image', label: '🖼 Image' }, { id: 'voice', label: '🎙 Voice' }, { id: 'video', label: '🎬 Video' }
+  { id: 'text', label: '✍️ Text' }, { id: 'image', label: '🖼 Image' }, { id: 'voice', label: '🎙 Voice' }, { id: 'music', label: '🎵 Music' }, { id: 'video', label: '🎬 Video' }
 ]
 const ASPECTS = ['1:1', '16:9', '9:16', '4:3', '3:4', '21:9']
 const STYLES: Record<string, string> = {
@@ -15,12 +15,15 @@ const STYLES: Record<string, string> = {
   'Flat illustration': 'flat vector illustration, minimal, bold shapes', 'Product shot': 'studio product photography, softbox lighting, white background',
   '3D render': 'octane render, 3D, soft global illumination', Watercolor: 'watercolor painting, soft edges, paper texture'
 }
+const GENRES = ['', 'Lo-fi hip hop', 'Cinematic orchestral', 'Upbeat pop', 'Acoustic folk', 'Electronic / EDM', 'Jazz', 'Ambient', 'Rock', 'Thai pop (T-pop)', 'Luk thung', 'Corporate / explainer', 'Children / playful']
+const MOODS = ['', 'Happy', 'Calm', 'Epic', 'Sad', 'Energetic', 'Romantic', 'Mysterious', 'Inspiring']
 const VOICES = ['alloy', 'ash', 'ballad', 'coral', 'echo', 'fable', 'onyx', 'nova', 'sage', 'shimmer', 'verse']
 
 const placeholders: Record<Mode, string> = {
   text: 'Write a 60-second product video script about…',
   image: 'A ceramic coffee mug on a wooden table, soft morning light…',
   voice: 'Paste the narration script to read aloud…',
+  music: 'Warm lo-fi beat with soft piano and vinyl crackle, 80 BPM, for a study video…',
   video: 'Slow dolly-in on a misty mountain lake at sunrise, cinematic…'
 }
 
@@ -31,7 +34,7 @@ async function fileToDataUrl(f: File): Promise<string> {
 export default function Composer(): React.JSX.Element {
   const { settings, models, refreshLibrary, refreshCredits, library } = useStore()
   const [mode, setMode] = useState<Mode>('image')
-  const [model, setModel] = useState<Record<Mode, string>>({ text: '', image: '', voice: '', video: '' })
+  const [model, setModel] = useState<Record<Mode, string>>({ text: '', image: '', voice: '', music: '', video: '' })
   const [prompt, setPrompt] = useState('')
   const [style, setStyle] = useState('')
   const [count, setCount] = useState(1)
@@ -41,6 +44,11 @@ export default function Composer(): React.JSX.Element {
   const [format, setFormat] = useState<'mp3' | 'wav' | 'opus'>('mp3')
   const [speed, setSpeed] = useState(1)
   const [instructions, setInstructions] = useState('')
+  const [genre, setGenre] = useState('')
+  const [mood, setMood] = useState('')
+  const [instrumental, setInstrumental] = useState(true)
+  const [lyrics, setLyrics] = useState('')
+  const [musicFormat, setMusicFormat] = useState<'mp3' | 'wav'>('mp3')
   const [duration, setDuration] = useState(5)
   const [resolution, setResolution] = useState('720p')
   const [busy, setBusy] = useState<'' | 'generate' | 'enhance'>('')
@@ -58,7 +66,11 @@ export default function Composer(): React.JSX.Element {
   }, [settings])
 
   const current = useMemo(() => models.find((m) => m.id === model[mode]), [models, model, mode])
-  const fullPrompt = style && (mode === 'image' || mode === 'video') ? `${prompt.trim()}, ${STYLES[style]}` : prompt.trim()
+  const fullPrompt = style && (mode === 'image' || mode === 'video')
+    ? `${prompt.trim()}, ${STYLES[style]}`
+    : mode === 'music'
+      ? [prompt.trim(), genre, mood ? `${mood.toLowerCase()} mood` : ''].filter(Boolean).join(', ')
+      : prompt.trim()
   const est = estimateCost(current, mode, { prompt: fullPrompt, count, durationSec: duration })
 
   const pickModel = (id: string): void => {
@@ -84,7 +96,9 @@ export default function Composer(): React.JSX.Element {
           ? await window.api.openrouter.chat({ model: m, prompt: fullPrompt })
           : mode === 'image'
             ? await window.api.openrouter.image({ model: m, prompt: fullPrompt, count, aspectRatio: aspect, referenceImages: refs })
-            : await window.api.openrouter.tts({ model: m, input: prompt.trim(), voice, format, speed, instructions: instructions || undefined })
+            : mode === 'music'
+              ? await window.api.openrouter.music({ model: m, prompt: fullPrompt, lyrics: instrumental ? undefined : lyrics, instrumental, format: musicFormat })
+              : await window.api.openrouter.tts({ model: m, input: prompt.trim(), voice, format, speed, instructions: instructions || undefined })
         setResults((prev) => [...r.assets.map((asset) => ({ asset, generation: r.generation })), ...prev])
       }
       await refreshLibrary(); void refreshCredits()
@@ -182,6 +196,22 @@ export default function Composer(): React.JSX.Element {
                 <input type="range" min={0.5} max={2} step={0.05} value={speed} onChange={(e) => setSpeed(Number(e.target.value))} /></label>
               <label className="field"><span>Format</span>
                 <select value={format} onChange={(e) => setFormat(e.target.value as typeof format)}><option>mp3</option><option>wav</option><option>opus</option></select></label>
+            </>
+          )}
+          {mode === 'music' && (
+            <>
+              <label className="field"><span>Genre</span>
+                <select value={genre} onChange={(e) => setGenre(e.target.value)}>{GENRES.map((g) => <option key={g} value={g}>{g || 'Any'}</option>)}</select></label>
+              <label className="field"><span>Mood</span>
+                <select value={mood} onChange={(e) => setMood(e.target.value)}>{MOODS.map((m) => <option key={m} value={m}>{m || 'Any'}</option>)}</select></label>
+              <label className="row"><input type="checkbox" checked={instrumental} onChange={(e) => setInstrumental(e.target.checked)} /> Instrumental (no vocals)</label>
+              {!instrumental && (
+                <label className="field"><span>Lyrics (optional, leave empty to let the model write them)</span>
+                  <textarea style={{ minHeight: 90 }} value={lyrics} onChange={(e) => setLyrics(e.target.value)} placeholder="[Verse 1]&#10;…&#10;[Chorus]&#10;…" /></label>
+              )}
+              <label className="field"><span>Format</span>
+                <select value={musicFormat} onChange={(e) => setMusicFormat(e.target.value as typeof musicFormat)}><option>mp3</option><option>wav</option></select></label>
+              <span className="hint">Length is set by the model: Lyria 3 Clip makes 30 s clips, Lyria 3 Pro makes full songs. Results go to Library and can be dropped on the Music track in the editor.</span>
             </>
           )}
           {mode === 'video' && (

@@ -12,9 +12,9 @@ export function modelsFor(models: ORModel[], mode: Mode): ORModel[] {
 export default function ModelSelect({ mode, value, onChange }: Props): React.JSX.Element {
   const { models, modelsError, refreshModels } = useStore()
   const list = useMemo(() => modelsFor(models, mode), [models, mode])
-  const unit = mode === 'image' ? 'image' : mode === 'voice' ? 'char' : mode === 'video' ? 'sec' : 'tok'
+  const unit = mode === 'image' ? 'image' : mode === 'voice' ? 'char' : mode === 'video' ? 'sec' : mode === 'music' ? 'song' : 'tok'
   const unitPrice = (m: ORModel): string => {
-    const p = mode === 'image' ? price(m.pricing.image) : mode === 'video' ? price(m.pricing.video ?? m.pricing.completion) : price(m.pricing.prompt)
+    const p = mode === 'image' ? price(m.pricing.image) : mode === 'video' ? price(m.pricing.video ?? m.pricing.completion) : mode === 'music' ? price(m.pricing.request) : price(m.pricing.prompt)
     if (!p) return ''
     return mode === 'text' ? ` · $${(p * 1e6).toFixed(2)}/M tok` : ` · $${p.toFixed(mode === 'voice' ? 6 : 3)}/${unit}`
   }

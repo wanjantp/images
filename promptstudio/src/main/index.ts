@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, net, protocol, shell } from 'electron'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
-import type { ChatRequest, ImageRequest, TTSRequest, VideoRequest, Settings } from '@shared/types'
+import type { ChatRequest, ImageRequest, MusicRequest, TTSRequest, VideoRequest, Settings } from '@shared/types'
 import * as settings from './settings'
 import * as or from './openrouter'
 import * as lib from './library'
@@ -69,6 +69,7 @@ function registerIpc(): void {
   ipcMain.handle('or:enhance', (_e, prompt: string, mode) => gen.enhancePrompt(prompt, mode))
   ipcMain.handle('or:image', (_e, req: ImageRequest) => gen.runImage(req))
   ipcMain.handle('or:tts', (_e, req: TTSRequest) => gen.runTTS(req))
+  ipcMain.handle('or:music', (_e, req: MusicRequest) => gen.runMusic(req))
   ipcMain.handle('or:videoSubmit', (_e, req: VideoRequest) => jobs.submitVideo(req))
 
   // library

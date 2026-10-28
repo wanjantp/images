@@ -17,6 +17,7 @@ const api: Api = {
     enhance: (prompt, mode) => ipcRenderer.invoke('or:enhance', prompt, mode),
     image: (req) => ipcRenderer.invoke('or:image', req),
     tts: (req) => ipcRenderer.invoke('or:tts', req),
+    music: (req) => ipcRenderer.invoke('or:music', req),
     videoSubmit: (req) => ipcRenderer.invoke('or:videoSubmit', req)
   },
   library: {

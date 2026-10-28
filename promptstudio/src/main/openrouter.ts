@@ -6,6 +6,7 @@
  */
 import type { ORModel, Credits } from '@shared/types'
 import { getApiKey } from './settings'
+import { collectAudio } from './audiostream'
 
 const BASE = 'https://openrouter.ai/api/v1'
 const APP_HEADERS = { 'HTTP-Referer': 'https://github.com/wanjantp/images', 'X-Title': 'PromptStudio' }
@@ -133,6 +134,34 @@ export async function tts(req: {
   const mime = r.headers.get('content-type') ?? (req.format === 'wav' ? 'audio/wav' : 'audio/mpeg')
   const id = r.headers.get('x-openrouter-generation-id') ?? undefined
   return { bytes: Buffer.from(await r.arrayBuffer()), mime, id }
+}
+
+// ---------- music (chat completions with audio output) ----------
+
+/**
+ * Music models (e.g. google/lyria-3-*) return audio through chat completions with
+ * modalities ["text","audio"]. OpenRouter documents that audio output goes through the
+ * streaming path, so we stream and collect delta.audio.data chunks, but also accept a
+ * single non-streamed message.audio.data payload.
+ */
+export async function generateMusic(req: {
+  model: string
+  prompt: string
+  format: 'mp3' | 'wav'
+}): Promise<{ bytes: Buffer; mime: string; id?: string; transcript?: string }> {
+  const body = {
+    model: req.model,
+    modalities: ['text', 'audio'],
+    audio: { format: req.format },
+    stream: true,
+    messages: [{ role: 'user', content: req.prompt }]
+  }
+  const r = await fetch(`${BASE}/chat/completions`, { method: 'POST', headers: await headers(), body: JSON.stringify(body) })
+  if (!r.ok) return fail(r)
+  const mime = req.format === 'wav' ? 'audio/wav' : 'audio/mpeg'
+  const { bytes, id, transcript, text } = await collectAudio(r)
+  if (bytes.length === 0) throw new Error(`Model returned no audio${text ? `: ${text.slice(0, 300)}` : ''}`)
+  return { bytes, mime, id, transcript }
 }
 
 // ---------- video (async) ----------
