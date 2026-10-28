@@ -7,6 +7,9 @@ import * as or from './openrouter'
 import * as lib from './library'
 import * as gen from './generate'
 import * as jobs from './jobs'
+import * as projects from './projects'
+import * as exporter from './export'
+import type { EditorProject, ExportRequest } from '@shared/timeline'
 
 // media://<assetId> serves files from the library folder to the renderer.
 protocol.registerSchemesAsPrivileged([
@@ -76,6 +79,29 @@ function registerIpc(): void {
     const p = await lib.assetPath(id)
     if (p) shell.showItemInFolder(p)
   })
+
+  ipcMain.handle('library:import', async () => {
+    const r = await dialog.showOpenDialog({
+      properties: ['openFile', 'multiSelections'],
+      filters: [{ name: 'Media', extensions: ['mp4', 'webm', 'mov', 'mkv', 'mp3', 'wav', 'ogg', 'm4a', 'aac', 'flac', 'png', 'jpg', 'jpeg', 'webp', 'gif'] }]
+    })
+    return r.canceled ? [] : lib.importFiles(r.filePaths)
+  })
+
+  // editor projects
+  ipcMain.handle('projects:list', () => projects.listProjects())
+  ipcMain.handle('projects:load', (_e, id: string) => projects.loadProject(id))
+  ipcMain.handle('projects:save', (_e, p: EditorProject) => projects.saveProject(p))
+  ipcMain.handle('projects:delete', (_e, id: string) => projects.deleteProject(id))
+
+  // export
+  ipcMain.handle('export:chooseOutput', async (_e, name: string) => {
+    const r = await dialog.showSaveDialog({ defaultPath: join(app.getPath('videos'), name), filters: [{ name: 'MP4 video', extensions: ['mp4'] }] })
+    return r.canceled || !r.filePath ? null : r.filePath
+  })
+  ipcMain.handle('export:run', (_e, req: ExportRequest) => exporter.runExport(req))
+  ipcMain.handle('export:cancel', () => exporter.cancelExport())
+  ipcMain.handle('export:openFile', (_e, p: string) => shell.openPath(p))
 
   // jobs
   ipcMain.handle('jobs:list', () => jobs.listJobs())

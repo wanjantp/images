@@ -109,3 +109,27 @@ export async function assetPath(assetId: string): Promise<string | undefined> {
 export function resetCache(): void {
   cache = null
 }
+
+const mimeFromExt = (name: string): { mime: string; kind: AssetKind } | null => {
+  const ext = name.toLowerCase().split('.').pop() ?? ''
+  const img: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp', gif: 'image/gif' }
+  const vid: Record<string, string> = { mp4: 'video/mp4', webm: 'video/webm', mov: 'video/quicktime', mkv: 'video/x-matroska' }
+  const aud: Record<string, string> = { mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg', opus: 'audio/opus', m4a: 'audio/mp4', aac: 'audio/aac', flac: 'audio/flac' }
+  if (img[ext]) return { mime: img[ext], kind: 'image' }
+  if (vid[ext]) return { mime: vid[ext], kind: 'video' }
+  if (aud[ext]) return { mime: aud[ext], kind: 'audio' }
+  return null
+}
+
+/** Copy user files (video, audio, images) into the library so projects stay portable. */
+export async function importFiles(paths: string[]): Promise<Asset[]> {
+  const out: Asset[] = []
+  for (const p of paths) {
+    const info = mimeFromExt(p)
+    if (!info) continue
+    const genId = newId()
+    await addGeneration({ id: genId, mode: 'text', model: 'import', prompt: p.split(/[\\/]/).pop() ?? p, params: { imported: true, source: p }, createdAt: new Date().toISOString(), costUsd: 0 })
+    out.push(await saveAsset({ kind: info.kind, bytes: await fs.readFile(p), mime: info.mime, generationId: genId }))
+  }
+  return out
+}

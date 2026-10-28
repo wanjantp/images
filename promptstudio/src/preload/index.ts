@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { Api, Asset, Job } from '@shared/types'
+import type { ExportProgress } from '@shared/timeline'
 
 const api: Api = {
   settings: {
@@ -23,7 +24,25 @@ const api: Api = {
     delete: (id) => ipcRenderer.invoke('library:delete', id),
     openFolder: () => ipcRenderer.invoke('library:openFolder'),
     reveal: (id) => ipcRenderer.invoke('library:reveal', id),
+    importFiles: () => ipcRenderer.invoke('library:import'),
     mediaUrl: (asset: Asset) => `media://${asset.id}`
+  },
+  projects: {
+    list: () => ipcRenderer.invoke('projects:list'),
+    load: (id) => ipcRenderer.invoke('projects:load', id),
+    save: (p) => ipcRenderer.invoke('projects:save', p),
+    delete: (id) => ipcRenderer.invoke('projects:delete', id)
+  },
+  exporter: {
+    chooseOutput: (name) => ipcRenderer.invoke('export:chooseOutput', name),
+    run: (req) => ipcRenderer.invoke('export:run', req),
+    cancel: () => ipcRenderer.invoke('export:cancel'),
+    openFile: (p) => ipcRenderer.invoke('export:openFile', p),
+    onProgress: (cb) => {
+      const handler = (_e: unknown, p: ExportProgress): void => cb(p)
+      ipcRenderer.on('export:progress', handler)
+      return () => ipcRenderer.removeListener('export:progress', handler)
+    }
   },
   jobs: {
     list: () => ipcRenderer.invoke('jobs:list'),

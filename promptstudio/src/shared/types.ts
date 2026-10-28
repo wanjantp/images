@@ -1,3 +1,5 @@
+import type { EditorProject, ExportProgress, ExportRequest } from './timeline'
+
 // Types shared by main, preload and renderer.
 
 export type Mode = 'text' | 'image' | 'voice' | 'video'
@@ -127,6 +129,8 @@ export interface GenerateResult {
   assets: Asset[]
 }
 
+export interface ProjectSummary { id: string; name: string; updatedAt: string }
+
 export interface Api {
   settings: {
     get(): Promise<Settings>
@@ -149,7 +153,21 @@ export interface Api {
     delete(assetId: string): Promise<LibraryIndex>
     openFolder(): Promise<void>
     reveal(assetId: string): Promise<void>
+    importFiles(): Promise<Asset[]>
     mediaUrl(asset: Asset): string
+  }
+  projects: {
+    list(): Promise<ProjectSummary[]>
+    load(id: string): Promise<EditorProject | null>
+    save(p: EditorProject): Promise<void>
+    delete(id: string): Promise<void>
+  }
+  exporter: {
+    chooseOutput(defaultName: string): Promise<string | null>
+    run(req: ExportRequest): Promise<ExportProgress>
+    cancel(): Promise<void>
+    onProgress(cb: (p: ExportProgress) => void): () => void
+    openFile(path: string): Promise<void>
   }
   jobs: {
     list(): Promise<Job[]>
